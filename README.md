@@ -20,7 +20,7 @@ bit of shell magic:
 Where `OUT.hs` would then contain the output code.
 
 ### Using the generated code
-Making the generated code more usable is a big TODO for now.
+Making the generated code more usable is a big [TODO](#todos) for now.
 But you can still copy paste the genertated code into an app
 although I really wouldn't reccomned it (It's really ugly
 right now).
