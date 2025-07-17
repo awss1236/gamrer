@@ -1,4 +1,4 @@
-toks := +, b, c, d, e, n
+toks := a, b, c, d, e, n
 
-<expr> := <term> | + <term>
+<expr> := <term> | a <term>
 <term> := c | d

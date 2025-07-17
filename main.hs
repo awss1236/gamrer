@@ -9,7 +9,7 @@ import Data.Maybe
 trim :: String -> String
 trim = dropWhileEnd isSpace . dropWhile isSpace
 
-data Token = BName String | Def | Or | Name String deriving (Show)
+data Token = BName String | Def | Or | Name String deriving (Show, Eq)
 
 newtype Lexer a = Lexer {runLexer :: String -> Maybe (a, String)}
 
@@ -87,20 +87,91 @@ lexTokens s =
   maybe [] (\(t, r) -> t : lexTokens r) $
     runLexer tokenLexer s
 
-data Expansion = Tok String | Expr [Expansion] deriving (Show)
+data Expansion = Expansion [Token] deriving (Show)
 
-newtype Rule = Rule (String, [Expansion]) deriving (Show)
+data Rule = Rule String [Expansion] deriving (Show)
 
-parseExpansion :: String -> Expansion
-parseExpansion = Tok
+parseExpansion :: [Token] -> Expansion
+parseExpansion = Expansion
 
-parseRule :: String -> Rule
-parseRule s = Rule (name, map parseExpansion $ splitOn "|" exp)
-  where
-    [name, exp] = splitOn ":=" s
+parseRule :: [Token] -> Rule
+parseRule (BName name : Def : r) = Rule name $ map parseExpansion $ splitOn [Or] r
 
 parseRules :: [String] -> [Rule]
-parseRules = map parseRule
+parseRules = map (parseRule . lexTokens)
+
+genRuleType :: Rule -> String
+genRuleType (Rule name cs) =
+  "data D"
+    ++ name
+    ++ " = "
+    ++ (intercalate " | " $ map (\(n, Expansion ts) -> "D" ++ name ++ show n ++ " " ++ toksToConst ts) (zip [1 ..] cs))
+  where
+    toksToConst :: [Token] -> String
+    toksToConst [] = ""
+    toksToConst [BName n] = "D" ++ n
+    toksToConst (BName n : r) = "D" ++ n ++ " " ++ toksToConst r
+    toksToConst (_ : r) = toksToConst r
+
+genRuleCode :: Rule -> String
+genRuleCode (Rule name cs) =
+  "parse"
+    ++ name
+    ++ " :: Parser D"
+    ++ name
+    ++ "\n"
+    ++ "pares"
+    ++ name
+    ++ " =\n  "
+    ++ (intercalate "\n    <|> " $ map genExpCode (zip [1 ..] cs))
+  where
+    genExpCode :: (Int, Expansion) -> String
+    genExpCode (n, Expansion ts) =
+      let ((s, f), r) = groupUpToks ts
+       in if terminal ts
+            then
+              "((const D"
+                ++ name
+                ++ show n
+                ++ ") <$> ("
+                ++ (intercalate " *> " $ map (\(Name t) -> "tokenParser T" ++ t) ts)
+                ++ "))"
+            else
+              "((pure D"
+                ++ name
+                ++ show n
+                ++ ") <*> ("
+                ++ intercalate " *> " (map (\(Name t) -> "tokenParser T" ++ t) s)
+                ++ " *> "
+                ++ genToksParser f
+                ++ ")"
+                ++ ( if null r
+                       then ""
+                       else
+                         " <*> " ++ intercalate " <*> " (map genToksParser r)
+                   )
+                ++ ")"
+
+    terminal :: [Token] -> Bool
+    terminal = not . any isBName
+
+    isBName (BName _) = True
+    isBName _ = False
+
+    genToksParser :: [Token] -> String
+    genToksParser (BName f : r) = "(" ++ f ++ "Parser <* " ++ intercalate " <* " (map (\(Name n) -> "tokenParser T" ++ n) r) ++ ")"
+
+    groupUpToks :: [Token] -> (([Token], [Token]), [[Token]])
+    groupUpToks ts =
+      let taketerns = takeWhile (not . isBName)
+          dropterns = dropWhile (not . isBName)
+
+          (bef, s) = (taketerns ts, dropterns ts)
+          groupS [] = []
+          groupS (t : r) = (t : (taketerns r)) : groupS (dropterns r)
+
+          (f : r') = groupS s
+       in ((bef, f), r')
 
 main :: IO ()
 main =
@@ -120,4 +191,4 @@ main =
 
     let rules = parseRules rules'
 
-    print inp
+    print rules
