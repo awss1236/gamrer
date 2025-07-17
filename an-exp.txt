@@ -1,0 +1,4 @@
+toks := +, b, c, d, e, n
+
+<expr> := <term> | + <term>
+<term> := c | d
