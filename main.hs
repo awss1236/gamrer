@@ -5,6 +5,7 @@ import Data.List
 import Data.List.NonEmpty qualified as NE
 import Data.List.Split
 import Data.Maybe
+import System.Environment
 
 trim :: String -> String
 trim = dropWhileEnd isSpace . dropWhile isSpace
@@ -106,6 +107,7 @@ genRuleType (Rule name cs) =
     ++ name
     ++ " = "
     ++ (intercalate " | " $ map (\(n, Expansion ts) -> "D" ++ name ++ show n ++ if null (toksToConst ts) then "" else (" " ++ toksToConst ts)) (zip [1 ..] cs))
+    ++ " deriving (Show, Eq)"
   where
     toksToConst :: [Token] -> String
     toksToConst [] = ""
@@ -120,7 +122,7 @@ genRuleCode (Rule name cs) =
     ++ " :: Parser D"
     ++ name
     ++ "\n"
-    ++ "pares"
+    ++ "parse"
     ++ name
     ++ " =\n  "
     ++ (intercalate "\n    <|> " $ map genExpCode (zip [1 ..] cs))
@@ -140,12 +142,13 @@ genRuleCode (Rule name cs) =
               "((pure D"
                 ++ name
                 ++ show n
-                ++ ") <*> ("
+                ++ ") <*> "
                 ++ ( if null s
                        then
                          ""
                        else
-                         intercalate " *> " (map (\(Name t) -> "tokenParser T" ++ t) s)
+                         "("
+                           ++ intercalate " *> " (map (\(Name t) -> "tokenParser T" ++ t) s)
                            ++ " *> "
                    )
                 ++ genToksParser f
@@ -164,8 +167,8 @@ genRuleCode (Rule name cs) =
     isBName _ = False
 
     genToksParser :: [Token] -> String
-    genToksParser [BName f] = "(" ++ f ++ "Parser)"
-    genToksParser (BName f : r) = "(" ++ f ++ "Parser <* " ++ intercalate " <* " (map (\(Name n) -> "tokenParser T" ++ n) r) ++ ")"
+    genToksParser [BName f] = "(parse" ++ f ++ ")"
+    genToksParser (BName f : r) = "(parse" ++ f ++ " <* " ++ intercalate " <* " (map (\(Name n) -> "tokenParser T" ++ n) r) ++ ")"
 
     groupUpToks :: [Token] -> (([Token], [Token]), [[Token]])
     groupUpToks ts =
@@ -182,6 +185,7 @@ genRuleCode (Rule name cs) =
 main :: IO ()
 main =
   do
+    args <- getArgs
     inp <-
       NE.fromList
         <$> filter (/= "")
@@ -196,8 +200,8 @@ main =
 
     let rules = parseRules rules'
 
-    putStrLn $ "import Control.Applicative\n\ndata Token = " ++ intercalate " | " (map (\t -> "T" ++ t) toks)
+    putStrLn $ "import Control.Applicative\n\ndata Token = " ++ intercalate " | " (map (\t -> "T" ++ t) toks) ++ " deriving (Show, Eq)"
     putStrLn $ intercalate "\n" (map genRuleType rules)
-    putStrLn $ "newtype Parser a = Parser {runParser :: [Token] -> Maybe (a, [Token])}\n\ninstance Functor Parser where\n  fmap f (Parser a) = Parser $ \\s -> do\n    (x, input') <- a s\n    Just (f x, input')\n\ninstance Applicative Parser where\n  pure a = Parser $ \t -> Just (a, t)\n  (<*>) (Parser f) (Parser a) = Parser $ \\s -> do\n    (jf, in1) <- f s\n    (ja, in2) <- a in1\n    Just (jf ja, in2)\n\ninstance Alternative Parser where\n  empty = Parser $ const Nothing\n  (Parser a) <|> (Parser b) = Parser $ \\s -> a s <|> b s\n\ntokenParser :: Token -> Parser Token\ntokenParser t = Parser $ \\ts -> case ts of\n  (t1 : rest) -> if t == t1 then Just (t, rest) else Nothing\n  _ -> Nothing\n"
+    putStrLn $ "newtype Parser a = Parser {runParser :: [Token] -> Maybe (a, [Token])}\n\ninstance Functor Parser where\n  fmap f (Parser a) = Parser $ \\s -> do\n    (x, input') <- a s\n    Just (f x, input')\n\ninstance Applicative Parser where\n  pure a = Parser $ \\t -> Just (a, t)\n  (<*>) (Parser f) (Parser a) = Parser $ \\s -> do\n    (jf, in1) <- f s\n    (ja, in2) <- a in1\n    Just (jf ja, in2)\n\ninstance Alternative Parser where\n  empty = Parser $ const Nothing\n  (Parser a) <|> (Parser b) = Parser $ \\s -> a s <|> b s\n\ntokenParser :: Token -> Parser Token\ntokenParser t = Parser $ \\ts -> case ts of\n  (t1 : rest) -> if t == t1 then Just (t, rest) else Nothing\n  _ -> Nothing\n"
 
     putStrLn $ intercalate "\n\n" (map genRuleCode rules)

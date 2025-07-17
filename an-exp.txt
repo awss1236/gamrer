@@ -1,4 +1,6 @@
-toks := a, b, c, d, e, n
+toks := def, or, bname, name
 
-<expr> := <term> | a <term>
-<term> := c | d
+<expanun> := name | bname
+<expan> := <expanun> <expan> | <expanun>
+<rulerhs> := <expan> or <rulerhs> | <expan>
+<rule> := bname def <rulerhs>
