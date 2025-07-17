@@ -27,9 +27,9 @@ right now).
 You may also wrap it into a module.
 
 ## TODOs
-- [] Make the interface better somehow (not too hard cause now it is non-existant).
-  - [] Add support for prenamed types and constructors.
-  - [] Add support for holding data within types.
-  - [] Add support for prenamed tokens.
-  - [] Make the outputted code a module.
-- [] Add a functional tokenizer.
+- [ ] Make the interface better somehow (not too hard cause now it is non-existant).
+  - [ ] Add support for prenamed types and constructors.
+  - [ ] Add support for holding data within types.
+  - [ ] Add support for prenamed tokens.
+  - [ ] Make the outputted code a module.
+- [ ] Add a functional tokenizer.
