@@ -141,10 +141,15 @@ genRuleCode (Rule name cs) =
                 ++ name
                 ++ show n
                 ++ ") <*> ("
-                ++ intercalate " *> " (map (\(Name t) -> "tokenParser T" ++ t) s)
-                ++ " *> "
+                ++ ( if null s
+                       then
+                         ""
+                       else
+                         intercalate " *> " (map (\(Name t) -> "tokenParser T" ++ t) s)
+                           ++ " *> "
+                   )
                 ++ genToksParser f
-                ++ ")"
+                ++ (if null s then "" else ")")
                 ++ ( if null r
                        then ""
                        else
@@ -159,6 +164,7 @@ genRuleCode (Rule name cs) =
     isBName _ = False
 
     genToksParser :: [Token] -> String
+    genToksParser [BName f] = "(" ++ f ++ "Parser)"
     genToksParser (BName f : r) = "(" ++ f ++ "Parser <* " ++ intercalate " <* " (map (\(Name n) -> "tokenParser T" ++ n) r) ++ ")"
 
     groupUpToks :: [Token] -> (([Token], [Token]), [[Token]])
@@ -179,7 +185,6 @@ main =
     inp <-
       NE.fromList
         <$> filter (/= "")
-        -- <$> map (filter (/= ' '))
         <$> lines
         <$> readFile "an-exp.txt"
 
