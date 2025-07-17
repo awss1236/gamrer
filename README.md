@@ -15,7 +15,7 @@ of a file containing the grammar:
 The Program outputs to stdout though so you may want to do a little
 bit of shell magic:
 ```
-./main FILE >> OUT.hs
+./main FILE > OUT.hs
 ```
 Where `OUT.hs` would then contain the output code.
 
