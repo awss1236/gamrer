@@ -33,3 +33,4 @@ You may also wrap it into a module.
   - [ ] Add support for prenamed tokens.
   - [ ] Make the outputted code a module.
 - [ ] Add a functional tokenizer.
+- [ ] Extend the current grammar functionalities. (EBNF, ABNF, ...)
