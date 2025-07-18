@@ -10,7 +10,7 @@ import System.Environment
 trim :: String -> String
 trim = dropWhileEnd isSpace . dropWhile isSpace
 
-data Token = BName String | Def | Or | Name String deriving (Show, Eq)
+data Token = BName String | Conc | Term | Def | Or | Plus | Times | Name String deriving (Show, Eq)
 
 newtype Lexer a = Lexer {runLexer :: String -> Maybe (a, String)}
 
@@ -72,9 +72,17 @@ tillLexer c = predLexer (/= c)
 bNameLexer :: Lexer Token
 bNameLexer = charLexer '<' *> (BName <$> tillLexer '>') <* charLexer '>'
 
-defLexer = (const Def) <$> stringLexer ":="
+defLexer = (const Def) <$> (stringLexer "::=" <|> stringLexer ":=") <|> (const Def) <$> (charLexer '=')
 
 orLexer = (const Or) <$> charLexer '|'
+
+concLexer = (const Conc) <$> charLexer ','
+
+termLexer = (const Term) <$> (charLexer ';' <|> charLexer '.')
+
+plusLexer = (const Term) <$> charLexer '+'
+
+timesLexer = (const Term) <$> charLexer '*'
 
 nameLexer :: Lexer Token
 nameLexer = Name <$> predLexer (\c -> not $ c `elem` ['<', '|', ' '])
