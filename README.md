@@ -34,3 +34,5 @@ You may also wrap it into a module.
   - [ ] Make the outputted code a module.
 - [ ] Add a functional tokenizer.
 - [ ] Extend the current grammar functionalities. (EBNF, ABNF, ...)
+  - [ ] Make the EBNF syntax acceptable.
+  - [ ] Implement the new features.
