@@ -5,7 +5,16 @@ import Data.Bifunctor
 import Data.Char
 import Data.Maybe
 
-data Token = BName String | Conc | Term | Def | Or | Plus | Times | Name String deriving (Show, Eq)
+data Token
+  = Terminal String
+  | NonTerminal String
+  | Definition
+  | Alternate
+  | DefAlternate
+  | Open Char
+  | Close Char
+  | Symbol Char
+  deriving (Show, Eq)
 
 newtype Lexer a = Lexer {runLexer :: String -> Maybe (a, String)}
 
@@ -58,26 +67,64 @@ predLexer f =
               else Just (t, l)
     )
 
+tryLexer :: Lexer a -> Lexer (Maybe a)
+tryLexer l =
+  Lexer
+    ( \s ->
+        let r = runLexer l s
+         in if isNothing r
+              then Just (Nothing, s)
+              else (first Just) <$> r
+    )
+
+exhaustLexer :: Lexer a -> Lexer [a]
+exhaustLexer l = appendLexer' l <*> (exhaustLexer l <|> pure [])
+  where
+    appendLexer' :: Lexer a -> Lexer ([a] -> [a])
+    appendLexer' l' =
+      Lexer
+        ( \s ->
+            let r = runLexer l' s
+             in case r of
+                  Just (a, s') -> Just (\as -> a : as, s')
+                  Nothing -> Nothing
+        )
+
 eatWhiteLexer :: Lexer ()
 eatWhiteLexer = const () <$> (predLexer isSpace <|> pure "")
 
-tillLexer :: Char -> Lexer String
-tillLexer c = predLexer (/= c)
+eatCommentLexer :: Lexer ()
+eatCommentLexer = const () <$> (charLexer ';' *> tillLexer '\n')
 
-defLexer, orLexer, concLexer, termLexer, plusLexer, timesLexer, bNameLexer :: Lexer Token
-bNameLexer = charLexer '<' *> (BName <$> tillLexer '>') <* charLexer '>'
-defLexer = (const Def) <$> (stringLexer "::=" <|> stringLexer ":=") <|> (const Def) <$> (charLexer '=')
-orLexer = (const Or) <$> charLexer '|'
-concLexer = (const Conc) <$> charLexer ','
-termLexer = (const Term) <$> (charLexer ';' <|> charLexer '.')
-plusLexer = (const Term) <$> charLexer '+'
-timesLexer = (const Term) <$> charLexer '*'
+eatUselessLexer :: Lexer ()
+eatUselessLexer = tryLexer (eatCommentLexer) *> eatWhiteLexer
 
-nameLexer :: Lexer Token
-nameLexer = Name <$> predLexer (\c -> not $ c `elem` ['<', '|', ' '])
+terminalLexer, nonTerminalLexer :: Lexer Token
+terminalLexer = undefined
+nonTerminalLexer = undefined
+
+definitionLexer, alternateLexer, defAlternateLexer :: Lexer Token
+definitionLexer = undefined
+alternateLexer = undefined
+defAlternateLexer = undefined
+
+openLexer, closeLexer, symbolLexer :: Lexer Token
+openLexer = undefined
+closeLexer = undefined
+symbolLexer = undefined
 
 tokenLexer :: Lexer Token
-tokenLexer = eatWhiteLexer *> (bNameLexer <|> defLexer <|> orLexer <|> nameLexer)
+tokenLexer =
+  eatUselessLexer
+    *> ( terminalLexer
+           <|> nonTerminalLexer
+           <|> definitionLexer
+           <|> alternateLexer
+           <|> defAlternateLexer
+           <|> openLexer
+           <|> closeLexer
+           <|> symbolLexer
+       )
 
 lexTokens :: String -> [Token]
 lexTokens "" = []

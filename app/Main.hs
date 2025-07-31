@@ -19,7 +19,8 @@ main =
   do
     args <- getArgs
     if null args
-      then printUsage
+      then
+        printUsage
       else do
         inp <-
           NE.fromList
