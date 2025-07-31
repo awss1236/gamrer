@@ -14,6 +14,7 @@ data Token
   | Open Char
   | Close Char
   | Symbol Char
+  | Number Int
   deriving (Show, Eq)
 
 newtype Lexer a = Lexer {runLexer :: String -> Maybe (a, String)}
@@ -90,28 +91,67 @@ exhaustLexer l = appendLexer' l <*> (exhaustLexer l <|> pure [])
                   Nothing -> Nothing
         )
 
-eatWhiteLexer :: Lexer ()
-eatWhiteLexer = const () <$> (predLexer isSpace <|> pure "")
+whiteLexer :: Lexer ()
+whiteLexer = const () <$> predLexer isSpace
+
+tillLexer :: Char -> Lexer String
+tillLexer c = predLexer (/= c)
 
 eatCommentLexer :: Lexer ()
-eatCommentLexer = const () <$> (charLexer ';' *> tillLexer '\n')
+eatCommentLexer =
+  const ()
+    <$> ( charLexer ';'
+            *> (charLexer '\n' <|> (const 'x' <$> tillLexer '\n'))
+        )
 
 eatUselessLexer :: Lexer ()
-eatUselessLexer = tryLexer (eatCommentLexer) *> eatWhiteLexer
+eatUselessLexer =
+  const () <$> (exhaustLexer (eatCommentLexer <|> whiteLexer))
+    <|> const () <$> charLexer ','
+    <|> pure ()
 
 terminalLexer, nonTerminalLexer :: Lexer Token
-terminalLexer = undefined
-nonTerminalLexer = undefined
+terminalLexer =
+  Terminal
+    <$> ( (charLexer '\"' *> tillLexer '\"' <* charLexer '\"')
+            <|> (charLexer '\'' *> tillLexer '\'' <* charLexer '\'')
+        )
+nonTerminalLexer =
+  NonTerminal
+    <$> ( (charLexer '<' *> tillLexer '>' <* charLexer '>')
+            <|> nameLexer
+        )
+  where
+    nameLexer = (++) <$> (predLexer (isAlpha)) <*> (predLexer middly <|> pure "")
+    middly c = isAlphaNum c || c == '_'
 
 definitionLexer, alternateLexer, defAlternateLexer :: Lexer Token
-definitionLexer = undefined
-alternateLexer = undefined
-defAlternateLexer = undefined
+definitionLexer =
+  const Definition
+    <$> ( stringLexer "::="
+            <|> stringLexer ":="
+            <|> stringLexer "="
+        )
+alternateLexer = const Alternate <$> (charLexer '|' <|> charLexer '/' <|> charLexer '!')
+defAlternateLexer = const DefAlternate <$> (stringLexer "/=" <|> stringLexer "=/")
 
 openLexer, closeLexer, symbolLexer :: Lexer Token
-openLexer = undefined
-closeLexer = undefined
-symbolLexer = undefined
+openLexer =
+  Open
+    <$> ( charLexer '('
+            <|> (charLexer '[' <|> const '[' <$> stringLexer "(/")
+            <|> (charLexer '{' <|> const '{' <$> stringLexer "(:")
+        )
+closeLexer =
+  Close
+    <$> ( charLexer ')'
+            <|> (charLexer ']' <|> const ']' <$> stringLexer "/)")
+            <|> (charLexer '}' <|> const '}' <$> stringLexer ":)")
+        )
+symbolLexer = Symbol <$> (foldr (\c l -> l <|> charLexer c) empty ['+', '-', '*'])
+
+numberLexer :: Lexer Token
+numberLexer = Number <$> (read <$> predLexer isNumber)
 
 tokenLexer :: Lexer Token
 tokenLexer =
@@ -124,6 +164,7 @@ tokenLexer =
            <|> openLexer
            <|> closeLexer
            <|> symbolLexer
+           <|> numberLexer
        )
 
 lexTokens :: String -> [Token]
