@@ -1,6 +1,0 @@
-toks := def, or, bname, name
-
-<expanun> := name | bname
-<expan> := <expanun> <expan> | <expanun>
-<rulerhs> := <expan> or <rulerhs> | <expan>
-<rule> := bname def <rulerhs>

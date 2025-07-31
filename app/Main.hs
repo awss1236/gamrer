@@ -1,8 +1,10 @@
+module Main where
+
 import Control.Applicative
 import Data.Bifunctor
 import Data.Char
 import Data.List
-import Data.List.NonEmpty qualified as NE
+import qualified Data.List.NonEmpty as NE
 import Data.List.Split
 import Data.Maybe
 import System.Environment
@@ -69,19 +71,13 @@ eatWhiteLexer = const () <$> (predLexer isSpace <|> pure "")
 tillLexer :: Char -> Lexer String
 tillLexer c = predLexer (/= c)
 
-bNameLexer :: Lexer Token
+defLexer, orLexer, concLexer, termLexer, plusLexer, timesLexer, bNameLexer :: Lexer Token
 bNameLexer = charLexer '<' *> (BName <$> tillLexer '>') <* charLexer '>'
-
 defLexer = (const Def) <$> (stringLexer "::=" <|> stringLexer ":=") <|> (const Def) <$> (charLexer '=')
-
 orLexer = (const Or) <$> charLexer '|'
-
 concLexer = (const Conc) <$> charLexer ','
-
 termLexer = (const Term) <$> (charLexer ';' <|> charLexer '.')
-
 plusLexer = (const Term) <$> charLexer '+'
-
 timesLexer = (const Term) <$> charLexer '*'
 
 nameLexer :: Lexer Token
@@ -105,6 +101,7 @@ parseExpansion = Expansion
 
 parseRule :: [Token] -> Rule
 parseRule (BName name : Def : r) = Rule name $ map parseExpansion $ splitOn [Or] r
+parseRule _ = undefined
 
 parseRules :: [String] -> [Rule]
 parseRules = map (parseRule . lexTokens)
@@ -144,7 +141,7 @@ genRuleCode (Rule name cs) =
                 ++ name
                 ++ show n
                 ++ ") <$> ("
-                ++ (intercalate " *> " $ map (\(Name t) -> "tokenParser T" ++ t) ts)
+                ++ (intercalate " *> " $ map toTokParse ts)
                 ++ "))"
             else
               "((pure D"
@@ -156,7 +153,7 @@ genRuleCode (Rule name cs) =
                          ""
                        else
                          "("
-                           ++ intercalate " *> " (map (\(Name t) -> "tokenParser T" ++ t) s)
+                           ++ intercalate " *> " (map toTokParse s)
                            ++ " *> "
                    )
                 ++ genToksParser f
@@ -167,6 +164,9 @@ genRuleCode (Rule name cs) =
                          " <*> " ++ intercalate " <*> " (map genToksParser r)
                    )
                 ++ ")"
+    toTokParse :: Token -> String
+    toTokParse (Name t) = "tokenParser T" ++ t
+    toTokParse _ = undefined
 
     terminal :: [Token] -> Bool
     terminal = not . any isBName
@@ -176,7 +176,8 @@ genRuleCode (Rule name cs) =
 
     genToksParser :: [Token] -> String
     genToksParser [BName f] = "(parse" ++ f ++ ")"
-    genToksParser (BName f : r) = "(parse" ++ f ++ " <* " ++ intercalate " <* " (map (\(Name n) -> "tokenParser T" ++ n) r) ++ ")"
+    genToksParser (BName f : r) = "(parse" ++ f ++ " <* " ++ intercalate " <* " (map toTokParse r) ++ ")"
+    genToksParser _ = undefined
 
     groupUpToks :: [Token] -> (([Token], [Token]), [[Token]])
     groupUpToks ts =
