@@ -9,8 +9,9 @@ data Token
   = Terminal String
   | NonTerminal String
   | Definition
-  | Alternate
   | DefAlternate
+  | Alternate
+  | Concatenate
   | Open Char
   | Close Char
   | Symbol Char
@@ -97,7 +98,6 @@ eatCommentLexer =
 eatUselessLexer :: Lexer ()
 eatUselessLexer =
   const () <$> (exhaustLexer (eatCommentLexer <|> whiteLexer))
-    <|> const () <$> charLexer ','
     <|> pure ()
 
 terminalLexer, nonTerminalLexer :: Lexer Token
@@ -115,15 +115,18 @@ nonTerminalLexer =
     nameLexer = (++) <$> (predLexer (isAlpha)) <*> (predLexer middly <|> pure "")
     middly c = isAlphaNum c || c == '_'
 
-definitionLexer, alternateLexer, defAlternateLexer :: Lexer Token
+definitionLexer, defAlternateLexer :: Lexer Token
 definitionLexer =
   const Definition
     <$> ( stringLexer "::="
             <|> stringLexer ":="
             <|> stringLexer "="
         )
-alternateLexer = const Alternate <$> (charLexer '|' <|> charLexer '/' <|> charLexer '!')
 defAlternateLexer = const DefAlternate <$> (stringLexer "/=" <|> stringLexer "=/")
+
+concatenateLexer, alternateLexer :: Lexer Token
+alternateLexer = const Alternate <$> (charLexer '|' <|> charLexer '/' <|> charLexer '!')
+concatenateLexer = const Concatenate <$> charLexer ','
 
 openLexer, closeLexer, symbolLexer :: Lexer Token
 openLexer =
@@ -149,8 +152,9 @@ tokenLexer =
     *> ( terminalLexer
            <|> nonTerminalLexer
            <|> definitionLexer
-           <|> alternateLexer
            <|> defAlternateLexer
+           <|> alternateLexer
+           <|> concatenateLexer
            <|> openLexer
            <|> closeLexer
            <|> symbolLexer
