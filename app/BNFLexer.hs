@@ -68,16 +68,6 @@ predLexer f =
               else Just (t, l)
     )
 
-tryLexer :: Lexer a -> Lexer (Maybe a)
-tryLexer l =
-  Lexer
-    ( \s ->
-        let r = runLexer l s
-         in if isNothing r
-              then Just (Nothing, s)
-              else (first Just) <$> r
-    )
-
 exhaustLexer :: Lexer a -> Lexer [a]
 exhaustLexer l = appendLexer' l <*> (exhaustLexer l <|> pure [])
   where
