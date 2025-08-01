@@ -12,7 +12,11 @@ trim :: String -> String
 trim = dropWhileEnd isSpace . dropWhile isSpace
 
 printUsage :: IO ()
-printUsage = putStrLn "USAGE: ./main FILE\nwhere the FILE is the file containing the grammar.\nThe program outputs to stdout."
+printUsage =
+  putStrLn
+    "USAGE: ./main FILE\n\
+    \where the FILE is the file containing the grammar.\n\
+    \The program outputs to stdout."
 
 main :: IO ()
 main =
