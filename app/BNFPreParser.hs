@@ -1,4 +1,4 @@
-module PreParser (tokensToPreRules, PreRule (..)) where
+module BNFPreParser (tokensToPreRules, PreRule (..)) where
 
 import BNFLexer (Token (..))
 import Data.List.Split
