@@ -1,0 +1,16 @@
+<rule> = "tem" [<rule>] "x"+ (blah blah blah)*
+
+units:
+"tem"
+[<rule>]
+"x"+
+(blah blah blah)*
+
+
+
+problem: !
+ambiguity in something like "a"*"b"
+as in: according to ebnf the * is applied to "a"
+but abnf says its for "b"
+
+solution: raise errors on ambiguous syntax to add spaces for example
