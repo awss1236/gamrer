@@ -70,15 +70,15 @@ predLexer f =
     )
 
 exhaustLexer :: Lexer a -> Lexer [a]
-exhaustLexer l = appendLexer' l <*> (exhaustLexer l <|> pure [])
+exhaustLexer l = appendLexer l <*> (exhaustLexer l <|> pure [])
   where
-    appendLexer' :: Lexer a -> Lexer ([a] -> [a])
-    appendLexer' l' =
+    appendLexer :: Lexer a -> Lexer ([a] -> [a])
+    appendLexer l' =
       Lexer
         ( \s ->
             let r = runLexer l' s
              in case r of
-                  Just (a, s') -> Just (\as -> a : as, s')
+                  Just (a, s') -> Just ((:) a, s')
                   Nothing -> Nothing
         )
 
