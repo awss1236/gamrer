@@ -1,7 +1,7 @@
 module BNFParser where
 
-import BNFLexer
-import BNFPreParser (PreRule (..), tokensToPreRules)
+import BNFLexer (Token (..))
+import BNFPreParser (PreRule (..))
 import Control.Applicative
 import Data.Bifunctor
 import Data.Maybe
