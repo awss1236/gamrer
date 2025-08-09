@@ -1,6 +1,6 @@
 module PreParser (tokensToPreRules, PreRule (..)) where
 
-import BNFLexer (Token (..), lexTokens)
+import BNFLexer (Token (..))
 import Data.List.Split
 import qualified Data.Map as M
 
