@@ -1,7 +1,7 @@
 module BNFParser where -- I still need to examine the "," token
 
 import BNFLexer (Token (..), lexTokens)
-import BNFPreParser (PreRule (..), tokensToPreRules)
+import BNFPreParser (PreRule (..), findDefs, tokensToPreRules)
 import Control.Applicative
 import Data.Bifunctor
 import Data.Maybe
