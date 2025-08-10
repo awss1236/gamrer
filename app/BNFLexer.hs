@@ -137,9 +137,9 @@ openLexer =
         )
 closeLexer =
   Close
-    <$> ( charLexer ')'
-            <|> (charLexer ']' <|> const ']' <$> stringLexer "/)")
-            <|> (charLexer '}' <|> const '}' <$> stringLexer ":)")
+    <$> ( const '(' <$> charLexer ')'
+            <|> const '[' <$> (charLexer ']' <|> const ']' <$> stringLexer "/)")
+            <|> const '{' <$> (charLexer '}' <|> const '}' <$> stringLexer ":)")
         )
 symbolLexer = Symbol <$> (foldr (\c l -> l <|> charLexer c) empty ['+', '-', '*'])
 
