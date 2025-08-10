@@ -145,7 +145,7 @@ closeLexer =
             <|> const '[' <$> (charLexer ']' <|> const ']' <$> stringLexer "/)")
             <|> const '{' <$> (charLexer '}' <|> const '}' <$> stringLexer ":)")
         )
-symbolLexer = Symbol <$> (foldr (\c l -> l <|> charLexer c) empty ['+', '-', '*'])
+symbolLexer = Symbol <$> (foldr (\c l -> l <|> charLexer c) empty ['+', '-', '*', '?'])
 
 numberLexer :: Lexer Token
 numberLexer = Number <$> (read <$> predLexer isNumber)

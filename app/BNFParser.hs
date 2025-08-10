@@ -1,4 +1,4 @@
-module BNFParser where
+module BNFParser where -- I still need to examine the "," token
 
 import BNFLexer (Token (..), lexTokens)
 import BNFPreParser (PreRule (..), tokensToPreRules)
@@ -108,6 +108,7 @@ expansionsParser =
 partParser :: Parser Part
 partParser =
   Part (Finite 1, Infinite) <$> (atomParser <* tokenParser (Symbol '+'))
+    <|> Part (Finite 0, Finite 1) <$> (atomParser <* tokenParser (Symbol '?'))
     <|> Part (Finite 1, Finite 1) <$> atomParser
     <|> liftA2 Part preAmountParser atomParser
     <|> Part (Finite 0, Finite 1)
