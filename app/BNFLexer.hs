@@ -3,6 +3,7 @@ module BNFLexer (Token (..), lexTokens) where
 import Control.Applicative
 import Data.Bifunctor
 import Data.Char
+import Data.List
 import Data.Maybe
 
 data Token
@@ -12,6 +13,7 @@ data Token
   | DefAlternate
   | Alternate
   | Concatenate
+  | NewLine -- Necessary for preparser step
   | Open Char
   | Close Char
   | Symbol Char
@@ -62,8 +64,7 @@ predLexer :: (Char -> Bool) -> Lexer String
 predLexer f =
   Lexer
     ( \s ->
-        let t = takeWhile f s
-            l = dropWhile f s
+        let (t, l) = span f s
          in if null t
               then Nothing
               else Just (t, l)
@@ -83,16 +84,35 @@ exhaustLexer l = appendLexer l <*> (exhaustLexer l <|> pure [])
         )
 
 whiteLexer :: Lexer ()
-whiteLexer = const () <$> predLexer isSpace
+whiteLexer = const () <$> predLexer (liftA2 (&&) isSpace (/= '\n'))
 
 tillLexer :: Char -> Lexer String
 tillLexer c = predLexer (/= c)
+
+tillLexerS :: String -> Lexer String
+tillLexerS ss =
+  Lexer
+    ( \s ->
+        let (t, l) = f s
+         in if null t
+              then Nothing
+              else Just (t, l)
+    )
+  where
+    f "" = ("", "")
+    f s =
+      if isPrefixOf ss s
+        then ("", s)
+        else
+          let (a : r) = s
+           in (\(t', l') -> (a : t', l')) $ f r
 
 eatCommentLexer :: Lexer ()
 eatCommentLexer =
   const ()
     <$> ( charLexer ';'
-            *> (charLexer '\n' <|> (const 'x' <$> tillLexer '\n'))
+            *> (charLexer '\n' <|> (const '\n' <$> tillLexer '\n'))
+            <|> stringLexer "(*" *> (const 'x' <$> tillLexerS "*)" <* stringLexer "*)")
         )
 
 eatUselessLexer :: Lexer ()
@@ -132,7 +152,8 @@ concatenateLexer, alternateLexer :: Lexer Token
 alternateLexer = const Alternate <$> (charLexer '|' <|> charLexer '/' <|> charLexer '!')
 concatenateLexer = const Concatenate <$> charLexer ','
 
-openLexer, closeLexer, symbolLexer :: Lexer Token
+newLineLexer, openLexer, closeLexer, symbolLexer :: Lexer Token
+newLineLexer = const NewLine <$> charLexer '\n'
 openLexer =
   Open
     <$> ( charLexer '('
@@ -159,6 +180,7 @@ tokenLexer =
            <|> definitionLexer
            <|> alternateLexer
            <|> concatenateLexer
+           <|> newLineLexer
            <|> openLexer
            <|> closeLexer
            <|> symbolLexer
