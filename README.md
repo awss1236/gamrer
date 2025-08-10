@@ -31,6 +31,7 @@ You may also wrap it into a module.
 - [ ] Extend the current grammar functionalities.
   - [ ] Make the ABNF/EBNF syntax supported.
     - [X] Add ability to lex all the different syntaxes.
-    - [ ] Add checker for ambiguous cases. (* in between two parts, non terminal chains, ...)
-    - [ ] Add ability to parse everything.
+    - [X] Add ability to parse everything.
+    - [ ] Add a post parsing cleanup and checking step.
+    - [ ] Add checker for ambiguous cases. (non terminal chains, ...)
     - [ ] Add codegen.

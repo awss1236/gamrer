@@ -1,7 +1,7 @@
 module BNFParser where
 
-import BNFLexer (Token (..))
-import BNFPreParser (PreRule (..))
+import BNFLexer (Token (..), lexTokens)
+import BNFPreParser (PreRule (..), tokensToPreRules)
 import Control.Applicative
 import Data.Bifunctor
 import Data.Maybe
@@ -12,7 +12,7 @@ instance Show Amount where
   show (Finite i) = show i
   show Infinite = "inf"
 
-data Atom = Reference String | Literal String | Group Expansion deriving (Show)
+data Atom = Reference String | Literal String | Group [Expansion] deriving (Show)
 
 data Part = Part (Amount, Amount) Atom deriving (Show)
 
@@ -94,8 +94,16 @@ atomParser = Parser $
   \ts -> case ts of
     (NonTerminal s : r) -> Just (Reference s, r, "")
     (Terminal s : r) -> Just (Literal s, r, "")
-    (Open '(' : r) -> runParser (Group <$> expansionParser <* tokenParser (Close ')')) r
+    (Open '(' : r) -> runParser (Group <$> expansionsParser <* tokenParser (Close '(')) r
     _ -> Nothing
+
+expansionsParser :: Parser [Expansion]
+expansionsParser =
+  (:)
+    <$> expansionParser
+    <*> ( (tokenParser Alternate *> expansionsParser)
+            <|> pure []
+        )
 
 partParser :: Parser Part
 partParser =
@@ -104,13 +112,13 @@ partParser =
     <|> liftA2 Part preAmountParser atomParser
     <|> Part (Finite 0, Finite 1)
       <$> ( tokenParser (Open '[')
-              *> (Group <$> expansionParser)
-              <* tokenParser (Close ']')
+              *> (Group <$> expansionsParser)
+              <* tokenParser (Close '[')
           )
     <|> Part (Finite 0, Infinite)
       <$> ( tokenParser (Open '{')
-              *> (Group <$> expansionParser)
-              <* tokenParser (Close '}')
+              *> (Group <$> expansionsParser)
+              <* tokenParser (Close '{')
           )
 
 expansionParser :: Parser Expansion
