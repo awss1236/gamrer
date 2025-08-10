@@ -122,7 +122,11 @@ definitionLexer =
             <|> stringLexer ":="
             <|> stringLexer "="
         )
-defAlternateLexer = const DefAlternate <$> (stringLexer "/=" <|> stringLexer "=/")
+defAlternateLexer =
+  const DefAlternate
+    <$> ( stringLexer "/="
+            <|> stringLexer "=/"
+        )
 
 concatenateLexer, alternateLexer :: Lexer Token
 alternateLexer = const Alternate <$> (charLexer '|' <|> charLexer '/' <|> charLexer '!')
@@ -151,8 +155,8 @@ tokenLexer =
   eatUselessLexer
     *> ( terminalLexer
            <|> nonTerminalLexer
-           <|> definitionLexer
            <|> defAlternateLexer
+           <|> definitionLexer
            <|> alternateLexer
            <|> concatenateLexer
            <|> openLexer
