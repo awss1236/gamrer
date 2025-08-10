@@ -1,6 +1,7 @@
-module BNFPreParser (tokensToPreRules, PreRule (..)) where
+module BNFPreParser (tokensToPreRules, PreRule (..), findDefs) where
 
 import BNFLexer (Token (..))
+import Data.List
 import Data.List.Split
 import qualified Data.Map as M
 
@@ -10,13 +11,30 @@ addPreRule :: PreRule -> M.Map String [[Token]] -> M.Map String [[Token]]
 addPreRule (PreRule n tss) rs = M.insertWith (++) n tss rs
 
 findDefs :: [Token] -> [[Token]]
-findDefs ts = drop 1 $ findDefs' ts []
+findDefs ts =
+  drop 1 $
+    cutToDefs [] $
+      filter (not . null) $
+        splitOn [NewLine] ts
   where
-    findDefs' :: [Token] -> [Token] -> [[Token]]
-    findDefs' (n : Definition : r) acc = acc : (findDefs' r [n, Definition])
-    findDefs' (n : DefAlternate : r) acc = acc : (findDefs' r [n, DefAlternate])
-    findDefs' (t : r) acc = findDefs' r (acc ++ [t])
-    findDefs' [] acc = [acc]
+    cutToDefs :: [Token] -> [[Token]] -> [[Token]]
+    cutToDefs acc [] = [acc]
+    cutToDefs acc (l : r) =
+      if Definition `elem` l || DefAlternate `elem` l
+        then acc : cutToDefs (collectName l) r
+        else cutToDefs (acc ++ l) r
+
+    collectName :: [Token] -> [Token]
+    collectName t =
+      let (a, b) = span (\x -> x /= Definition && x /= DefAlternate) t
+       in conc a : b
+
+    conc :: [Token] -> Token
+    conc a = NonTerminal $ intercalate " " $ map appNonTerminal a
+
+    appNonTerminal :: Token -> String
+    appNonTerminal (NonTerminal n) = n
+    appNonTerminal _ = error "unreachable appNonTerminal in BNFPreParser."
 
 defToPreRule :: [Token] -> PreRule
 defToPreRule (NonTerminal n : _ : r) = PreRule n exps
