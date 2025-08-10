@@ -113,7 +113,7 @@ nonTerminalLexer =
         )
   where
     nameLexer = (++) <$> (predLexer (isAlpha)) <*> (predLexer middly <|> pure "")
-    middly c = isAlphaNum c || c == '_'
+    middly c = isAlphaNum c || c == '_' || c == '-'
 
 definitionLexer, defAlternateLexer :: Lexer Token
 definitionLexer =
